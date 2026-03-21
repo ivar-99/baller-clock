@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🎲 Baller Clock — Bonus Tracker (IST)</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #070b14;
+      --panel:   #0d1525;
+      --border:  #1a2a45;
+      --accent:  #00d4ff;
+      --gold:    #ffd700;
+      --green:   #00e676;
+      --purple:  #9c27b0;
+      --orange:  #ff6d00;
+      --red:     #ff1744;
+      --text:    #cdd8f0;
+      --muted:   #4a5a78;
+      --three-c: #ff6d00;   /* orange for 3 Rolls */
+      --five-c:  #9c27b0;   /* purple for 5 Rolls */
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 {
+      font-size: clamp(1.3rem, 4vw, 2rem);
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px rgba(0,212,255,0.4);
+    }
+    .ist-clock {
+      font-size: clamp(1.1rem, 3vw, 1.6rem);
+      color: var(--gold);
+      margin-top: 8px;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+    .updated-tag {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 3px 12px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+    .live-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      margin-right: 6px;
+      animation: blink 1.2s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* ── MAIN GRID ── */
+    .main-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr 1fr;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    @media (max-width: 640px) { .main-grid { grid-template-columns: 1fr; } }
+    .full-width { grid-column: 1 / -1; }
+
+    /* ── PANEL ── */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .panel.three { border-color: var(--three-c); box-shadow: 0 0 20px rgba(255,109,0,0.12); }
+    .panel.five  { border-color: var(--five-c);  box-shadow: 0 0 20px rgba(156,39,176,0.15); }
+
+    .panel-title {
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-title .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .three .panel-title .dot { background: var(--three-c); box-shadow: 0 0 8px var(--three-c); }
+    .five  .panel-title .dot { background: var(--five-c);  box-shadow: 0 0 8px var(--five-c); }
+
+    /* ── PREDICTION BOX ── */
+    .predict-box {
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .predict-label { font-size: 0.65rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+    .predict-time  { font-size: clamp(1rem, 3vw, 1.4rem); font-weight: bold; margin: 6px 0; }
+    .three .predict-time { color: var(--three-c); }
+    .five  .predict-time { color: var(--five-c);  }
+
+    .countdown {
+      font-size: 0.8rem;
+      padding: 4px 12px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-top: 4px;
+      font-weight: bold;
+    }
+    .countdown.future { background: rgba(0,230,118,0.15); color: var(--green); border: 1px solid var(--green); }
+    .countdown.overdue{ background: rgba(255,23,68,0.15);  color: var(--red);   border: 1px solid var(--red);   }
+    .countdown.soon   { background: rgba(255,214,0,0.15);  color: var(--gold);  border: 1px solid var(--gold);  }
+
+    /* ── STAT GRID ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .stat-item {
+      background: rgba(0,0,0,0.25);
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: center;
+    }
+    .stat-val  { font-size: 1.3rem; font-weight: bold; color: var(--gold); }
+    .stat-lbl  { font-size: 0.6rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+
+    /* ── LAST SEEN ── */
+    .last-seen {
+      font-size: 0.75rem;
+      color: var(--text);
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+    }
+    .last-seen span { color: var(--gold); font-weight: bold; }
+
+    /* ── HISTORY TABLE ── */
+    .history-title {
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .history-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(26,42,69,0.6);
+      font-size: 0.75rem;
+    }
+    .history-row:last-child { border-bottom: none; }
+    .hist-time { color: var(--muted); flex: 1; font-size: 0.68rem; }
+    .hist-mult {
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.72rem;
+    }
+    .three .hist-mult { background: rgba(255,109,0,0.15); color: var(--three-c); border: 1px solid rgba(255,109,0,0.3); }
+    .five  .hist-mult { background: rgba(156,39,176,0.15); color: #ce93d8; border: 1px solid rgba(156,39,176,0.3); }
+    .hist-payout { color: var(--green); font-size: 0.7rem; margin-left: auto; }
+
+    /* ── INTERVAL BAR ── */
+    .interval-info {
+      display: flex;
+      gap: 8px;
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .interval-info div { flex: 1; background: rgba(0,0,0,0.2); border-radius: 6px; padding: 6px 4px; }
+    .interval-info strong { display: block; color: var(--text); font-size: 0.8rem; }
+
+    /* ── NO DATA ── */
+    .no-data {
+      text-align: center;
+      padding: 30px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+    }
+
+    /* ── FOOTER ── */
+    .disclaimer {
+      max-width: 1100px;
+      margin: 16px auto 0;
+      padding: 10px 16px;
+      background: rgba(255,23,68,0.06);
+      border: 1px solid rgba(255,23,68,0.2);
+      border-radius: 8px;
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎲 Baller Clock</h1>
+  <div class="ist-clock" id="live-ist">Loading IST…</div>
+  <div class="updated-tag">
+    <span class="live-dot"></span>
+    Data updated: <span id="data-updated">—</span> &nbsp;|&nbsp; Auto-refresh every 2 min
+  </div>
+</header>
+
+<div class="main-grid">
+
+  <!-- ── 3 ROLLS PANEL ────────────────────────────────────── -->
+  <div class="panel three" id="panel-three">
+    <div class="panel-title">
+      <span class="dot"></span>
+      🎲 3 Rolls Bonus
+    </div>
+    <div class="no-data">Loading…</div>
+  </div>
+
+  <!-- ── 5 ROLLS PANEL ────────────────────────────────────── -->
+  <div class="panel five" id="panel-five">
+    <div class="panel-title">
+      <span class="dot"></span>
+      🎰 5 Rolls Bonus
+    </div>
+    <div class="no-data">Loading…</div>
+  </div>
+
+  <!-- ── COMBINED TIMELINE ─────────────────────────────────── -->
+  <div class="panel full-width" id="panel-timeline">
+    <div class="panel-title" style="color:var(--accent);">
+      📋 Combined Recent History (newest first)
+    </div>
+    <div class="no-data">Loading…</div>
+  </div>
+
+</div>
+
+<div class="disclaimer">
+  ⚠️ Bonus rounds are random (certified RNG by Evolution Gaming). Predictions are based on
+  <strong>average historical interval</strong> — not a guarantee of future results.
+  All times shown in <strong>Indian Standard Time (IST, UTC+5:30)</strong>.
+  For entertainment and pattern-observation only. Gamble responsibly.
+</div>
+
+<script>
+  const STATE_URL = 'bonus_state.json';
+
+  // ── Live IST clock ────────────────────────────────────────────────────────
+  function updateClock() {
+    const now = new Date();
+    const ist = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+    const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+    const timeStr = ist.toLocaleTimeString('en-IN', opts);
+    const dateStr = ist.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+    document.getElementById('live-ist').textContent = `🕒 ${dateStr}, ${timeStr} IST`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ── Countdown label ───────────────────────────────────────────────────────
+  function countdownLabel(minutes) {
+    if (minutes === null || minutes === undefined) return '';
+    const abs = Math.abs(minutes);
+    const h = Math.floor(abs / 60);
+    const m = Math.round(abs % 60);
+    const str = h > 0 ? `${h}h ${m}m` : `${m} min`;
+
+    if (minutes < -10) return `<span class="countdown overdue">🔴 Overdue by ${str}</span>`;
+    if (minutes < 5)   return `<span class="countdown soon">🟡 Due very soon (~${str})</span>`;
+    return `<span class="countdown future">🟢 In ~${str}</span>`;
+  }
+
+  // ── Render a bonus panel ──────────────────────────────────────────────────
+  function renderPanel(panelId, stats, cssClass, emoji, label) {
+    const panel = document.getElementById(panelId);
+    // keep title
+    const title = panel.querySelector('.panel-title').outerHTML;
+
+    if (!stats) {
+      panel.innerHTML = title + `<div class="no-data">No ${label} data yet.<br>Run the scraper first.</div>`;
+      return;
+    }
+
+    const predTime  = stats.predicted_next_ist || '—';
+    const predMins  = stats.predicted_in_minutes;
+    const cdLabel   = countdownLabel(predMins);
+
+    const avgMult  = stats.avg_multiplier  ? `${stats.avg_multiplier}x` : '—';
+    const maxMult  = stats.max_multiplier  ? `${stats.max_multiplier}x` : '—';
+    const avgInt   = stats.avg_interval_min ? `${stats.avg_interval_min} min` : '—';
+    const minInt   = stats.min_interval_min ? `${stats.min_interval_min} min` : '—';
+    const maxInt   = stats.max_interval_min ? `${stats.max_interval_min} min` : '—';
+    const sinceMin = stats.minutes_since_last !== null ? `${stats.minutes_since_last} min ago` : '—';
+
+    const histRows = (stats.recent_10 || []).map(r => `
+      <div class="history-row">
+        <span class="hist-time">${r.ist_time}</span>
+        <span class="hist-mult">${r.multiplier ? r.multiplier + 'x' : '—'}</span>
+        <span class="hist-payout">${r.payout || ''}</span>
+      </div>
+    `).join('') || '<div class="no-data" style="padding:10px">No history yet</div>';
+
+    panel.innerHTML = `
+      ${title}
+
+      <div class="predict-box">
+        <div class="predict-label">🔮 Predicted Next ${label}</div>
+        <div class="predict-time">${predTime}</div>
+        ${cdLabel}
+      </div>
+
+      <div class="last-seen">
+        Last seen: <span>${stats.last_seen_ist || '—'}</span>
+        &nbsp;·&nbsp; ${sinceMin}
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-item"><div class="stat-val">${stats.total_count}</div><div class="stat-lbl">Total Seen</div></div>
+        <div class="stat-item"><div class="stat-val">${avgMult}</div><div class="stat-lbl">Avg Multiplier</div></div>
+        <div class="stat-item"><div class="stat-val">${maxMult}</div><div class="stat-lbl">Max Multiplier</div></div>
+        <div class="stat-item"><div class="stat-val">${avgInt}</div><div class="stat-lbl">Avg Interval</div></div>
+      </div>
+
+      <div class="interval-info">
+        <div><strong>${minInt}</strong>Shortest Gap</div>
+        <div><strong>${avgInt}</strong>Avg Gap</div>
+        <div><strong>${maxInt}</strong>Longest Gap</div>
+      </div>
+
+      <div class="history-title">Recent ${label} occurrences</div>
+      ${histRows}
+    `;
+  }
+
+  // ── Combined timeline ─────────────────────────────────────────────────────
+  function renderTimeline(history) {
+    const panel = document.getElementById('panel-timeline');
+    const title = panel.querySelector('.panel-title').outerHTML;
+
+    if (!history || !history.length) {
+      panel.innerHTML = title + '<div class="no-data">No history yet.</div>';
+      return;
+    }
+
+    // Sort newest first
+    const sorted = [...history].sort((a, b) => {
+      const ta = a.utc_time || a.ist_iso || '';
+      const tb = b.utc_time || b.ist_iso || '';
+      return tb.localeCompare(ta);
+    }).slice(0, 30);
+
+    const rows = sorted.map(r => {
+      const isThree = r.bonus_type === '3 Rolls';
+      const color = isThree ? 'var(--three-c)' : 'var(--five-c)';
+      const bg    = isThree ? 'rgba(255,109,0,0.12)' : 'rgba(156,39,176,0.12)';
+      return `
+        <div class="history-row" style="border-color:rgba(255,255,255,0.05);">
+          <span style="color:${color};font-weight:bold;min-width:70px;">${isThree ? '🎲 3 Rolls' : '🎰 5 Rolls'}</span>
+          <span class="hist-time">${r.ist_time || r.raw_time || '—'}</span>
+          <span class="hist-mult" style="background:${bg};color:${color};border-color:${color}33;">${r.multiplier ? r.multiplier + 'x' : '—'}</span>
+          <span class="hist-payout">${r.payout || ''}</span>
+        </div>
+      `;
+    }).join('');
+
+    panel.innerHTML = title + rows;
+  }
+
+  // ── Load & render ─────────────────────────────────────────────────────────
+  async function loadAndRender() {
+    try {
+      const res  = await fetch(STATE_URL + '?t=' + Date.now());
+      const data = await res.json();
+      const a    = data.analytics || {};
+
+      document.getElementById('data-updated').textContent = data.last_updated_ist || '—';
+
+      renderPanel('panel-three', a.three_rolls, 'three', '🎲', '3 Rolls');
+      renderPanel('panel-five',  a.five_rolls,  'five',  '🎰', '5 Rolls');
+      renderTimeline(data.history || []);
+
+    } catch (e) {
+      console.error('Load error:', e);
+    }
+  }
+
+  loadAndRender();
+  setInterval(loadAndRender, 120_000);  // refresh every 2 minutes
+</script>
+
+</body>
+</html>
