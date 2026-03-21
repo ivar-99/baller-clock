@@ -278,12 +278,11 @@
   const STATE_URL = 'bonus_state.json';
 
   // ── Live IST clock ────────────────────────────────────────────────────────
-  function updateClock() {
+ function updateClock() {
     const now = new Date();
-    const ist = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-    const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
-    const timeStr = ist.toLocaleTimeString('en-IN', opts);
-    const dateStr = ist.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+    const opts = { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+    const timeStr = now.toLocaleTimeString('en-IN', opts);
+    const dateStr = now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day:'2-digit', month:'short', year:'numeric' });
     document.getElementById('live-ist').textContent = `🕒 ${dateStr}, ${timeStr} IST`;
   }
   setInterval(updateClock, 1000);
